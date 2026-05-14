@@ -16,6 +16,7 @@ import com.roadguardian.backend.model.dto.response.AccidentResponse;
 import com.roadguardian.backend.model.dto.response.ApiResponse;
 import com.roadguardian.backend.security.CustomUserDetails;
 import com.roadguardian.backend.service.AccidentService;
+import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
