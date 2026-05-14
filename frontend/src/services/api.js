@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8081/api/accidents"
+const BASE_URL = "http://localhost:8080/api/v1/accidents"
 
 export const fetchAccidents = async () => {
 
@@ -10,7 +10,7 @@ export const fetchAccidents = async () => {
 export const fetchMetrics = async () => {
 
   const response =
-    await fetch(`${BASE_URL}/metrics`)
+    await fetch("http://localhost:8080/api/v1/analytics/dashboard")
 
   return response.json()
 }

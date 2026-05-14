@@ -1,6 +1,7 @@
 package com.roadguardian.backend.security;
 
 import lombok.AllArgsConstructor;
+import com.roadguardian.backend.model.entity.Role;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,7 +19,7 @@ public class CustomUserDetails implements UserDetails {
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
 		return Collections.singleton(
-				new SimpleGrantedAuthority("ROLE_" + user.getRole().toString())
+				new SimpleGrantedAuthority("ROLE_" + user.getRole().getName())
 		);
 	}
 
@@ -60,7 +61,7 @@ public class CustomUserDetails implements UserDetails {
 		return user.getId();
 	}
 
-	public User.UserRole getRole() {
+	public Role getRole() {
 		return user.getRole();
 	}
 }

@@ -13,7 +13,7 @@ public class UserDTO {
 	private String lastName;
 	private String email;
 	private String phone;
-	private User.UserRole role;
+	private String roleName;
 	private Boolean active;
 	private String vehicleNumber;
 	private Double latitude;

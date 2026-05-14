@@ -3,17 +3,19 @@ package com.roadguardian.backend.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.roadguardian.backend.model.dto.AccidentDTO;
-import com.roadguardian.backend.model.dto.CreateAccidentRequest;
-import com.roadguardian.backend.model.entity.Accident;
-import com.roadguardian.backend.service.AccidentService;
+import com.roadguardian.backend.exception.InvalidRequestException;
+import com.roadguardian.backend.model.dto.request.CreateAccidentRequest;
+import com.roadguardian.backend.model.dto.request.UpdateAccidentRequest;
+import com.roadguardian.backend.model.dto.response.AccidentResponse;
+import com.roadguardian.backend.model.dto.response.ApiResponse;
 import com.roadguardian.backend.security.CustomUserDetails;
-
-import jakarta.validation.Valid;
+import com.roadguardian.backend.service.AccidentService;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
@@ -29,68 +31,127 @@ public class AccidentController {
 	@PostMapping
 	@PreAuthorize("hasAnyRole('USER', 'ADMIN', 'POLICE')")
 	@Operation(summary = "Report new accident", description = "Create a new accident report")
-	public ResponseEntity<AccidentDTO> createAccident(
+	public ResponseEntity<ApiResponse<AccidentResponse>> createAccident(
 			@Valid @RequestBody CreateAccidentRequest request,
 			Authentication authentication
 	) {
-		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-		return ResponseEntity.ok(accidentService.createAccident(request, userDetails.getUserId()));
+		Long userId = extractUserIdFromAuth(authentication);
+		AccidentResponse response = accidentService.createAccident(request, userId);
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(new ApiResponse<>(true, "Accident reported successfully", response));
 	}
 
 	@GetMapping("/{id}")
 	@Operation(summary = "Get accident details", description = "Fetch accident information by ID")
-	public ResponseEntity<AccidentDTO> getAccident(@PathVariable Long id) {
-		return ResponseEntity.ok(accidentService.getAccidentById(id));
+	public ResponseEntity<ApiResponse<AccidentResponse>> getAccident(@PathVariable Long id) {
+		AccidentResponse response = accidentService.getAccidentById(id);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Accident fetched successfully", response));
 	}
 
 	@GetMapping
 	@Operation(summary = "Get all accidents", description = "Fetch paginated list of accidents")
-	public ResponseEntity<List<AccidentDTO>> getAllAccidents(
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "20") int size
+	public ResponseEntity<ApiResponse<Page<AccidentResponse>>> getAllAccidents(
+			@RequestParam(defaultValue = "0") int pageNumber,
+			@RequestParam(defaultValue = "20") int pageSize,
+			@RequestParam(defaultValue = "createdAt") String sortBy,
+			@RequestParam(defaultValue = "DESC") String sortDirection
 	) {
-		return ResponseEntity.ok(accidentService.getAllAccidents(page, size));
+		Page<AccidentResponse> response = accidentService.getAccidentsPaginated(pageNumber, pageSize, sortBy, sortDirection);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Accidents fetched successfully", response));
 	}
 
 	@GetMapping("/severity/{severity}")
 	@Operation(summary = "Get accidents by severity", description = "Filter accidents by severity level")
-	public ResponseEntity<List<AccidentDTO>> getBySeverity(@PathVariable String severity) {
-		return ResponseEntity.ok(accidentService.getAccidentsBySeverity(
-				Accident.SeverityLevel.valueOf(severity.toUpperCase())
-		));
+	public ResponseEntity<ApiResponse<List<AccidentResponse>>> getBySeverity(@PathVariable String severity) {
+		List<AccidentResponse> response = accidentService.getAccidentsBySeverity(severity);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Accidents filtered by severity", response));
+	}
+
+	@GetMapping("/status/{status}")
+	@Operation(summary = "Get accidents by status", description = "Filter accidents by status")
+	public ResponseEntity<ApiResponse<List<AccidentResponse>>> getByStatus(@PathVariable String status) {
+		List<AccidentResponse> response = accidentService.getAccidentsByStatus(status);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Accidents filtered by status", response));
 	}
 
 	@GetMapping("/nearby")
 	@Operation(summary = "Find nearby accidents", description = "Get accidents near coordinates")
-	public ResponseEntity<List<AccidentDTO>> getNearbyAccidents(
+	public ResponseEntity<ApiResponse<List<AccidentResponse>>> getNearbyAccidents(
 			@RequestParam Double latitude,
 			@RequestParam Double longitude,
 			@RequestParam(defaultValue = "5") Double radiusKm
 	) {
-		return ResponseEntity.ok(accidentService.getNearbyAccidents(latitude, longitude, radiusKm));
+		List<AccidentResponse> response = accidentService.getNearbyAccidents(latitude, longitude, radiusKm);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Nearby accidents fetched", response));
 	}
 
-	@GetMapping("/active/list")
+	@GetMapping("/active/all")
 	@Operation(summary = "Get active accidents", description = "Fetch all active (unresolved) accidents")
-	public ResponseEntity<List<AccidentDTO>> getActiveAccidents() {
-		return ResponseEntity.ok(accidentService.getActiveAccidents());
+	public ResponseEntity<ApiResponse<List<AccidentResponse>>> getActiveAccidents() {
+		List<AccidentResponse> response = accidentService.getActiveAccidents();
+		return ResponseEntity.ok(new ApiResponse<>(true, "Active accidents fetched", response));
 	}
 
-	@PutMapping("/{id}/status")
-	@PreAuthorize("hasAnyRole('ADMIN', 'POLICE', 'AMBULANCE')")
-	@Operation(summary = "Update accident status", description = "Change accident status")
-	public ResponseEntity<AccidentDTO> updateStatus(
+	@PutMapping("/{id}")
+	@PreAuthorize("hasAnyRole('ADMIN', 'POLICE')")
+	@Operation(summary = "Update accident", description = "Update accident details")
+	public ResponseEntity<ApiResponse<AccidentResponse>> updateAccident(
 			@PathVariable Long id,
-			@RequestParam Accident.IncidentStatus status
+			@Valid @RequestBody UpdateAccidentRequest request
 	) {
-		return ResponseEntity.ok(accidentService.updateAccidentStatus(id, status));
+		AccidentResponse response = accidentService.updateAccident(id, request);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Accident updated successfully", response));
+	}
+
+	@PostMapping("/{id}/assign-ambulance")
+	@PreAuthorize("hasAnyRole('ADMIN', 'POLICE')")
+	@Operation(summary = "Assign ambulance", description = "Assign ambulance to accident")
+	public ResponseEntity<ApiResponse<String>> assignAmbulance(
+			@PathVariable Long id,
+			@RequestParam Long ambulanceUserId
+	) {
+		accidentService.assignAmbulance(id, ambulanceUserId);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Ambulance assigned successfully", ""));
+	}
+
+	@PostMapping("/{id}/assign-police")
+	@PreAuthorize("hasAnyRole('ADMIN')")
+	@Operation(summary = "Assign police", description = "Assign police unit to accident")
+	public ResponseEntity<ApiResponse<String>> assignPolice(
+			@PathVariable Long id,
+			@RequestParam Long policeUserId
+	) {
+		accidentService.assignPolice(id, policeUserId);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Police assigned successfully", ""));
+	}
+
+	@PostMapping("/{id}/assign-hospital")
+	@PreAuthorize("hasAnyRole('ADMIN')")
+	@Operation(summary = "Assign hospital", description = "Alert hospital for accident")
+	public ResponseEntity<ApiResponse<String>> assignHospital(
+			@PathVariable Long id,
+			@RequestParam Long hospitalUserId
+	) {
+		accidentService.assignHospital(id, hospitalUserId);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Hospital alerted successfully", ""));
 	}
 
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Delete accident", description = "Remove accident record (admin only)")
-	public ResponseEntity<Void> deleteAccident(@PathVariable Long id) {
+	public ResponseEntity<ApiResponse<String>> deleteAccident(@PathVariable Long id) {
 		accidentService.deleteAccident(id);
-		return ResponseEntity.ok().build();
+		return ResponseEntity.ok(new ApiResponse<>(true, "Accident deleted successfully", ""));
+	}
+
+	private Long extractUserIdFromAuth(Authentication authentication) {
+		if (authentication == null || !authentication.isAuthenticated()) {
+			throw new InvalidRequestException("Authentication required");
+		}
+		Object principal = authentication.getPrincipal();
+		if (principal instanceof CustomUserDetails details) {
+			return details.getUserId();
+		}
+		throw new InvalidRequestException("Unsupported authentication principal");
 	}
 }

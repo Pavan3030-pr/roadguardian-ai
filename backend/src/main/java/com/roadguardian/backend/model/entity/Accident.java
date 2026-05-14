@@ -74,6 +74,15 @@ public class Accident {
 
 	private Long responseTimeMs;
 
+	@Column(length = 50)
+	private String weatherCondition;
+
+	@Column(length = 50)
+	private String trafficDensity;
+
+	@Column(length = 50)
+	private String roadType;
+
 	@CreationTimestamp
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;

@@ -2,7 +2,6 @@ package com.roadguardian.backend.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -40,7 +39,27 @@ public class LiveTracking {
 
 	private String heading;
 
-	@CreationTimestamp
-	@Column(nullable = false, updatable = false)
-	private LocalDateTime timestamp;
+	@Column(length = 50)
+	private String status;
+
+	@Column(name = "last_updated", nullable = false)
+	private LocalDateTime lastUpdated;
+
+	@PrePersist
+	protected void onCreate() {
+		if (lastUpdated == null) {
+			lastUpdated = LocalDateTime.now();
+		}
+		if (status == null) {
+			status = "ACTIVE";
+		}
+		if (speed == null) {
+			speed = 0.0;
+		}
+	}
+
+	@PreUpdate
+	protected void onUpdate() {
+		lastUpdated = LocalDateTime.now();
+	}
 }

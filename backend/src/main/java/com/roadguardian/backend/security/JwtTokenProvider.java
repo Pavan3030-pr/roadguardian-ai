@@ -2,7 +2,6 @@ package com.roadguardian.backend.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 
@@ -21,10 +20,10 @@ public class JwtTokenProvider {
 		Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
 		return Jwts.builder()
-				.setSubject(email)
-				.setIssuedAt(now)
-				.setExpiration(expiryDate)
-				.signWith(secretKey, SignatureAlgorithm.HS512)
+				.subject(email)
+				.issuedAt(now)
+				.expiration(expiryDate)
+				.signWith(secretKey)
 				.compact();
 	}
 
@@ -33,29 +32,29 @@ public class JwtTokenProvider {
 		Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
 		return Jwts.builder()
-				.setSubject(email)
-				.setIssuedAt(now)
-				.setExpiration(expiryDate)
-				.signWith(secretKey, SignatureAlgorithm.HS512)
+				.subject(email)
+				.issuedAt(now)
+				.expiration(expiryDate)
+				.signWith(secretKey)
 				.compact();
 	}
 
 	public String getEmailFromJWT(String token) {
-		Claims claims = Jwts.parserBuilder()
-				.setSigningKey(secretKey)
+		Claims claims = Jwts.parser()
+				.verifyWith(secretKey)
 				.build()
-				.parseClaimsJws(token)
-				.getBody();
+				.parseSignedClaims(token)
+				.getPayload();
 
 		return claims.getSubject();
 	}
 
 	public boolean validateToken(String token) {
 		try {
-			Jwts.parserBuilder()
-					.setSigningKey(secretKey)
+			Jwts.parser()
+					.verifyWith(secretKey)
 					.build()
-					.parseClaimsJws(token);
+					.parseSignedClaims(token);
 			return true;
 		} catch (Exception ex) {
 			return false;
