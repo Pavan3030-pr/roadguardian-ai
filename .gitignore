@@ -1,4 +1,16 @@
-# Logs
+# frontend
+frontend/node_modules
+frontend/dist
+
+# backend
+backend/target
+backend/.idea
+
+# env
+.env
+
+# mac
+.DS_Store# Logs
 logs
 *.log
 npm-debug.log*
