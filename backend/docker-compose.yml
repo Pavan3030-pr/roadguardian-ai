@@ -107,12 +107,13 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
+      - ../frontend/dist:/usr/share/nginx/html:ro
     depends_on:
       - backend
     networks:
       - roadguardian-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
       interval: 10s
       timeout: 3s
       retries: 3
