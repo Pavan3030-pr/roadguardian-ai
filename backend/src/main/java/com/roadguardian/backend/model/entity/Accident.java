@@ -1,18 +1,22 @@
 package com.roadguardian.backend.model.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "accidents", indexes = {
-		@Index(name = "idx_severity", columnList = "severity"),
-		@Index(name = "idx_status", columnList = "status"),
-		@Index(name = "idx_created_at", columnList = "created_at"),
-		@Index(name = "idx_location", columnList = "latitude,longitude")
+    @Index(name = "idx_severity", columnList = "severity"),
+    @Index(name = "idx_status", columnList = "status"),
+    @Index(name = "idx_created_at", columnList = "created_at")
 })
 @Data
 @NoArgsConstructor
@@ -20,90 +24,92 @@ import java.time.LocalDateTime;
 @Builder
 public class Accident {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Column(nullable = false)
-	private String title;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reported_by_id", nullable = false)
+    private User reportedBy;
 
-	@Column(columnDefinition = "TEXT")
-	private String description;
+    @Column(nullable = false, columnDefinition = "DOUBLE PRECISION")
+    private Double latitude;
 
-	@Column(nullable = false)
-	private Double latitude;
+    @Column(nullable = false, columnDefinition = "DOUBLE PRECISION")
+    private Double longitude;
 
-	@Column(nullable = false)
-	private Double longitude;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
-	@Column(nullable = false)
-	private String locationName;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Severity severity;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private SeverityLevel severity;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private IncidentStatus status;
+    @Column(nullable = false)
+    private Integer estimatedCasualties;
 
-	@Column(nullable = false)
-	private Integer riskScore;
+    @Enumerated(EnumType.STRING)
+    private WeatherCondition weatherCondition;
 
-	private Integer casualties;
+    @Enumerated(EnumType.STRING)
+    private TrafficDensity trafficDensity;
 
-	private String imageUrl;
+    @Enumerated(EnumType.STRING)
+    private RoadType roadType;
 
-	private String videoUrl;
+    @Column(name = "ai_risk_score")
+    private Double aiRiskScore;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "reported_by_id", nullable = false)
-	private User reportedBy;
+    @Column(name = "ambulance_required")
+    private Boolean ambulanceRequired;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "ambulance_assigned_id")
-	private User ambulanceAssigned;
+    @Column(name = "police_alert_level", length = 50)
+    private String policeAlertLevel;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "police_assigned_id")
-	private User policeAssigned;
+    @Column(name = "nearby_hospital_id")
+    private Long nearbyHospitalId;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "hospital_assigned_id")
-	private User hospitalAssigned;
+    @OneToMany(mappedBy = "accident", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<EmergencyResponse> emergencyResponses = new HashSet<>();
 
-	private Long responseTimeMs;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-	@Column(length = 50)
-	private String weatherCondition;
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
-	@Column(length = 50)
-	private String trafficDensity;
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
 
-	@Column(length = 50)
-	private String roadType;
+    @Column(name = "image_url")
+    private String imageUrl;
 
-	@CreationTimestamp
-	@Column(nullable = false, updatable = false)
-	private LocalDateTime createdAt;
+    @Column(name = "video_url")
+    private String videoUrl;
 
-	@UpdateTimestamp
-	@Column(nullable = false)
-	private LocalDateTime updatedAt;
+    public enum Severity {
+        LOW, MODERATE, HIGH, CRITICAL
+    }
 
-	public enum SeverityLevel {
-		LOW,
-		MODERATE,
-		HIGH,
-		CRITICAL
-	}
+    public enum Status {
+        REPORTED, ACKNOWLEDGED, IN_PROGRESS, RESOLVED, CANCELLED
+    }
 
-	public enum IncidentStatus {
-		REPORTED,
-		DISPATCHED,
-		IN_PROGRESS,
-		RESOLVED,
-		ESCALATED,
-		CLOSED
-	}
+    public enum WeatherCondition {
+        CLEAR, RAINY, FOGGY, STORMY, SNOWY
+    }
+
+    public enum TrafficDensity {
+        LOW, MODERATE, HIGH, VERY_HIGH
+    }
+
+    public enum RoadType {
+        HIGHWAY, CITY, RURAL, ARTERIAL
+    }
 }

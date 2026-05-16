@@ -1,15 +1,18 @@
 package com.roadguardian.backend.model.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notifications", indexes = {
-		@Index(name = "idx_user_id", columnList = "user_id"),
-		@Index(name = "idx_is_read", columnList = "is_read")
+    @Index(name = "idx_user_id", columnList = "user_id"),
+    @Index(name = "idx_read_status", columnList = "is_read")
 })
 @Data
 @NoArgsConstructor
@@ -17,37 +20,38 @@ import java.time.LocalDateTime;
 @Builder
 public class Notification {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id", nullable = false)
-	private User user;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-	@Column(nullable = false)
-	private String title;
+    @Column(nullable = false, length = 255)
+    private String title;
 
-	@Column(columnDefinition = "TEXT")
-	private String message;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String message;
 
-	@Enumerated(EnumType.STRING)
-	private NotificationType type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private NotificationType type;
 
-	@Column(nullable = false)
-	private Boolean isRead = false;
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead;
 
-	private Long accidentId;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-	@CreationTimestamp
-	@Column(nullable = false, updatable = false)
-	private LocalDateTime createdAt;
+    @Column(name = "accident_id")
+    private Long accidentId;
 
-	public enum NotificationType {
-		ACCIDENT_ALERT,
-		DISPATCH_UPDATE,
-		RESPONSE_NEEDED,
-		ESCALATION_WARNING,
-		SYSTEM_NOTIFICATION
-	}
+    @Column(name = "related_entity_id")
+    private Long relatedEntityId;
+
+    public enum NotificationType {
+        EMERGENCY_ALERT, DISPATCH_REQUEST, STATUS_UPDATE, GENERAL, URGENT
+    }
 }

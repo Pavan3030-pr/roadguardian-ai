@@ -1,118 +1,73 @@
 package com.roadguardian.backend.model.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.*;
 
 @Entity
 @Table(name = "users", indexes = {
-		@Index(name = "idx_email", columnList = "email", unique = true),
-		@Index(name = "idx_phone", columnList = "phone"),
-		@Index(name = "idx_role_id", columnList = "role_id")
+    @Index(name = "idx_email", columnList = "email", unique = true),
+    @Index(name = "idx_phone", columnList = "phone_number")
 })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User implements UserDetails {
+public class User {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Column(nullable = false)
-	private String firstName;
+    @Column(nullable = false, length = 100)
+    private String name;
 
-	@Column(nullable = false)
-	private String lastName;
+    @Column(nullable = false, unique = true, length = 100)
+    private String email;
 
-	@Column(nullable = false, unique = true, length = 100)
-	private String email;
+    @Column(nullable = false, length = 255)
+    private String password;
 
-	@Column(nullable = false, length = 20)
-	private String phone;
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
 
-	@Column(nullable = false, length = 255)
-	private String password;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
 
-	@ManyToOne(fetch = FetchType.EAGER)
-	@JoinColumn(name = "role_id", nullable = false)
-	private Role role;
+    @Column(nullable = false)
+    private Boolean active;
 
-	@Column(nullable = false)
-	private Boolean active = true;
+    @Column(length = 50)
+    private String licenseNumber;
 
-	@Column(nullable = false)
-	private Boolean emailVerified = false;
+    @Column(length = 100)
+    private String department;
 
-	private String vehicleNumber;
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
 
-	private String ambulanceId;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-	private String policeId;
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
-	private String hospitalId;
+    @Column(length = 500)
+    private String address;
 
-	private Double latitude;
+    @Column(name = "emergency_contact_number", length = 20)
+    private String emergencyContactNumber;
 
-	private Double longitude;
-
-	@Column(columnDefinition = "TEXT")
-	private String profileImageUrl;
-
-	@Column(nullable = false, updatable = false)
-	private LocalDateTime createdAt;
-
-	@Column(nullable = false)
-	private LocalDateTime updatedAt;
-
-	private LocalDateTime lastLoginAt;
-
-	@PrePersist
-	protected void onCreate() {
-		createdAt = LocalDateTime.now();
-		updatedAt = LocalDateTime.now();
-	}
-
-	@PreUpdate
-	protected void onUpdate() {
-		updatedAt = LocalDateTime.now();
-	}
-
-	@Override
-	public Collection<? extends GrantedAuthority> getAuthorities() {
-		Set<GrantedAuthority> authorities = new HashSet<>();
-		authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
-		return authorities;
-	}
-
-	@Override
-	public String getUsername() {
-		return email;
-	}
-
-	@Override
-	public boolean isAccountNonExpired() {
-		return true;
-	}
-
-	@Override
-	public boolean isAccountNonLocked() {
-		return true;
-	}
-
-	@Override
-	public boolean isCredentialsNonExpired() {
-		return true;
-	}
-
-	@Override
-	public boolean isEnabled() {
-		return active;
-	}
+    public enum UserRole {
+        ADMIN, POLICE, HOSPITAL, AMBULANCE, USER, DISPATCHER
+    }
 }

@@ -1,14 +1,18 @@
 package com.roadguardian.backend.model.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "live_tracking", indexes = {
-		@Index(name = "idx_user_id", columnList = "user_id"),
-		@Index(name = "idx_accident_id", columnList = "accident_id")
+    @Index(name = "idx_response_id", columnList = "response_id"),
+    @Index(name = "idx_created_at", columnList = "created_at")
 })
 @Data
 @NoArgsConstructor
@@ -16,50 +20,30 @@ import java.time.LocalDateTime;
 @Builder
 public class LiveTracking {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id", nullable = false)
-	private User user;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "response_id", nullable = false)
+    private EmergencyResponse response;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "accident_id", nullable = false)
-	private Accident accident;
+    @Column(nullable = false, columnDefinition = "DOUBLE PRECISION")
+    private Double latitude;
 
-	@Column(nullable = false)
-	private Double latitude;
+    @Column(nullable = false, columnDefinition = "DOUBLE PRECISION")
+    private Double longitude;
 
-	@Column(nullable = false)
-	private Double longitude;
+    @Column(name = "speed_kmh")
+    private Double speedKmh;
 
-	@Column(nullable = false)
-	private Double speed;
+    @Column(name = "heading_degrees")
+    private Double headingDegrees;
 
-	private String heading;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-	@Column(length = 50)
-	private String status;
-
-	@Column(name = "last_updated", nullable = false)
-	private LocalDateTime lastUpdated;
-
-	@PrePersist
-	protected void onCreate() {
-		if (lastUpdated == null) {
-			lastUpdated = LocalDateTime.now();
-		}
-		if (status == null) {
-			status = "ACTIVE";
-		}
-		if (speed == null) {
-			speed = 0.0;
-		}
-	}
-
-	@PreUpdate
-	protected void onUpdate() {
-		lastUpdated = LocalDateTime.now();
-	}
+    @Column(name = "accuracy_meters")
+    private Double accuracyMeters;
 }
