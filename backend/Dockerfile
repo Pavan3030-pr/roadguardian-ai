@@ -11,12 +11,12 @@ COPY src ./src
 RUN mvn clean package -DskipTests -q
 
 # Runtime stage
-FROM eclipse-temurin:17-jdk-alpine
+FROM eclipse-temurin:17-jdk
 
 WORKDIR /app
 
 # Install curl for health checks
-RUN apk add --no-cache curl
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Copy built JAR from builder
 COPY --from=builder /build/target/backend-*.jar app.jar

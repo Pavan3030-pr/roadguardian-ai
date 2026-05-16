@@ -12,8 +12,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "emergency_responses", indexes = {
-    @Index(name = "idx_accident_id", columnList = "accident_id"),
-    @Index(name = "idx_responder_id", columnList = "responder_id")
+	@Index(name = "idx_emergency_responses_accident_id", columnList = "accident_id"),
+	@Index(name = "idx_emergency_responses_responder_id", columnList = "responder_id"),
+	@Index(name = "idx_emergency_responses_status", columnList = "status")
 })
 @Data
 @NoArgsConstructor

@@ -8,8 +8,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "analytics_events", indexes = {
-		@Index(name = "idx_event_type", columnList = "event_type"),
-		@Index(name = "idx_created_at", columnList = "created_at")
+	@Index(name = "idx_analytics_events_event_type", columnList = "event_type"),
+	@Index(name = "idx_analytics_events_created_at", columnList = "created_at")
 })
 @Data
 @NoArgsConstructor

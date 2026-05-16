@@ -9,7 +9,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "roles", indexes = {
-		@Index(name = "idx_name", columnList = "name", unique = true)
+	@Index(name = "idx_roles_name", columnList = "name", unique = true)
 })
 @Data
 @NoArgsConstructor

@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "permissions", indexes = {
-		@Index(name = "idx_name", columnList = "name", unique = true)
+	@Index(name = "idx_permissions_name", columnList = "name", unique = true)
 })
 @Data
 @NoArgsConstructor
