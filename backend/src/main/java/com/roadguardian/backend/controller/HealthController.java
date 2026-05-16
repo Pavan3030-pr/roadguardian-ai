@@ -14,27 +14,41 @@ public class HealthController {
 	@GetMapping
 	@Operation(summary = "Health check", description = "Check if service is running")
 	public ResponseEntity<HealthResponse> health() {
-		return ResponseEntity.ok(HealthResponse.builder()
-				.status("UP")
-				.message("RoadGuardian Backend is operational")
-				.build());
+		return ResponseEntity.ok(new HealthResponse("UP", "RoadGuardian Backend is operational"));
 	}
 
 	@GetMapping("/ready")
 	@Operation(summary = "Readiness check", description = "Check if service is ready for traffic")
 	public ResponseEntity<HealthResponse> readiness() {
-		return ResponseEntity.ok(HealthResponse.builder()
-				.status("READY")
-				.message("Service is ready")
-				.build());
+		return ResponseEntity.ok(new HealthResponse("READY", "Service is ready"));
 	}
 
-	@lombok.Data
-	@lombok.NoArgsConstructor
-	@lombok.AllArgsConstructor
-	@lombok.Builder
 	public static class HealthResponse {
 		private String status;
 		private String message;
+
+		public HealthResponse() {
+		}
+
+		public HealthResponse(String status, String message) {
+			this.status = status;
+			this.message = message;
+		}
+
+		public String getStatus() {
+			return status;
+		}
+
+		public void setStatus(String status) {
+			this.status = status;
+		}
+
+		public String getMessage() {
+			return message;
+		}
+
+		public void setMessage(String message) {
+			this.message = message;
+		}
 	}
 }

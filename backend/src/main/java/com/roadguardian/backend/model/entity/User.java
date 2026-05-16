@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users", indexes = {
 	@Index(name = "idx_users_email", columnList = "email", unique = true),
-	@Index(name = "idx_users_phone_number", columnList = "phone_number")
+	@Index(name = "idx_users_phone", columnList = "phone")
 })
 @Data
 @NoArgsConstructor
@@ -25,8 +25,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String name;
+    @Column(name = "first_name", nullable = false, length = 50)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false, length = 50)
+    private String lastName;
 
     @Column(nullable = false, unique = true, length = 100)
     private String email;
@@ -34,17 +37,23 @@ public class User {
     @Column(nullable = false, length = 255)
     private String password;
 
-    @Column(name = "phone_number", length = 20)
-    private String phoneNumber;
+    @Column(name = "phone", length = 20)
+    private String phone;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     @Column(nullable = false)
     private Boolean active;
 
-    @Column(length = 50)
+    @Column(name = "email_verified")
+    private Boolean emailVerified;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+    @Column(name = "license_number", length = 50)
     private String licenseNumber;
 
     @Column(length = 100)
@@ -53,6 +62,18 @@ public class User {
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String address;
+
+    @Column(name = "latitude", columnDefinition = "DOUBLE PRECISION")
+    private Double latitude;
+
+    @Column(name = "longitude", columnDefinition = "DOUBLE PRECISION")
+    private Double longitude;
+
+    @Column(name = "emergency_contact_number", length = 20)
+    private String emergencyContactNumber;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -60,14 +81,4 @@ public class User {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
-
-    @Column(length = 500)
-    private String address;
-
-    @Column(name = "emergency_contact_number", length = 20)
-    private String emergencyContactNumber;
-
-    public enum UserRole {
-        ADMIN, POLICE, HOSPITAL, AMBULANCE, USER, DISPATCHER
-    }
 }

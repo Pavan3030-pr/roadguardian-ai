@@ -29,9 +29,9 @@ public class DispatchServiceImpl implements DispatchService {
 
 		EmergencyResponse response = EmergencyResponse.builder()
 				.accident(accident)
-				.type(EmergencyResponse.ResponseType.AMBULANCE)
+				.responseType(EmergencyResponse.ResponseType.AMBULANCE)
 				.status(EmergencyResponse.ResponseStatus.DISPATCHED)
-				.assignedTo(ambulance)
+				.responder(ambulance)
 				.build();
 
 		emergencyResponseRepository.save(response);
@@ -52,9 +52,9 @@ public class DispatchServiceImpl implements DispatchService {
 
 		EmergencyResponse response = EmergencyResponse.builder()
 				.accident(accident)
-				.type(EmergencyResponse.ResponseType.POLICE)
+				.responseType(EmergencyResponse.ResponseType.POLICE)
 				.status(EmergencyResponse.ResponseStatus.DISPATCHED)
-				.assignedTo(police)
+				.responder(police)
 				.build();
 
 		emergencyResponseRepository.save(response);
@@ -75,9 +75,9 @@ public class DispatchServiceImpl implements DispatchService {
 
 		EmergencyResponse response = EmergencyResponse.builder()
 				.accident(accident)
-				.type(EmergencyResponse.ResponseType.HOSPITAL)
+				.responseType(EmergencyResponse.ResponseType.HOSPITAL_COORDINATION)
 				.status(EmergencyResponse.ResponseStatus.DISPATCHED)
-				.assignedTo(hospital)
+				.responder(hospital)
 				.build();
 
 		emergencyResponseRepository.save(response);

@@ -76,6 +76,6 @@ public class EmergencyResponse {
     }
 
     public enum ResponseStatus {
-        PENDING, ACCEPTED, EN_ROUTE, ARRIVED, COMPLETED, CANCELLED
+        PENDING, DISPATCHED, ACCEPTED, EN_ROUTE, ARRIVED, COMPLETED, CANCELLED
     }
 }

@@ -29,9 +29,11 @@ public class Accident {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reported_by_id", nullable = false)
-    private User reportedBy;
+    @Column(nullable = false)
+    private String title;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Column(nullable = false, columnDefinition = "DOUBLE PRECISION")
     private Double latitude;
@@ -39,43 +41,55 @@ public class Accident {
     @Column(nullable = false, columnDefinition = "DOUBLE PRECISION")
     private Double longitude;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "location_name", nullable = false)
+    private String locationName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Severity severity;
+    private SeverityLevel severity;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status;
+    private IncidentStatus status;
 
-    @Column(nullable = false)
-    private Integer estimatedCasualties;
+    @Column(name = "risk_score", nullable = false)
+    private Integer riskScore;
 
-    @Enumerated(EnumType.STRING)
-    private WeatherCondition weatherCondition;
+    private Integer casualties;
 
-    @Enumerated(EnumType.STRING)
-    private TrafficDensity trafficDensity;
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
 
-    @Enumerated(EnumType.STRING)
-    private RoadType roadType;
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
 
-    @Column(name = "ai_risk_score")
-    private Double aiRiskScore;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reported_by_id", nullable = false)
+    private User reportedBy;
 
-    @Column(name = "ambulance_required")
-    private Boolean ambulanceRequired;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ambulance_assigned_id")
+    private User ambulanceAssigned;
 
-    @Column(name = "police_alert_level", length = 50)
-    private String policeAlertLevel;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "police_assigned_id")
+    private User policeAssigned;
 
-    @Column(name = "nearby_hospital_id")
-    private Long nearbyHospitalId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_assigned_id")
+    private User hospitalAssigned;
 
-    @OneToMany(mappedBy = "accident", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<EmergencyResponse> emergencyResponses = new HashSet<>();
+    @Column(name = "response_time_ms")
+    private Long responseTimeMs;
+
+    @Column(name = "weather_condition", length = 50)
+    private String weatherCondition;
+
+    @Column(name = "traffic_density", length = 50)
+    private String trafficDensity;
+
+    @Column(name = "road_type", length = 50)
+    private String roadType;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -88,18 +102,12 @@ public class Accident {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
-    @Column(name = "image_url")
-    private String imageUrl;
-
-    @Column(name = "video_url")
-    private String videoUrl;
-
-    public enum Severity {
+    public enum SeverityLevel {
         LOW, MODERATE, HIGH, CRITICAL
     }
 
-    public enum Status {
-        REPORTED, ACKNOWLEDGED, IN_PROGRESS, RESOLVED, CANCELLED
+    public enum IncidentStatus {
+        REPORTED, ACKNOWLEDGED, IN_PROGRESS, DISPATCHED, ESCALATED, RESOLVED, CANCELLED
     }
 
     public enum WeatherCondition {
