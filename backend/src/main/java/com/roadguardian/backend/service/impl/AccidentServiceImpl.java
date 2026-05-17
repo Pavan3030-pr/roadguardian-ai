@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,8 +16,13 @@ import com.roadguardian.backend.model.dto.request.CreateAccidentRequest;
 import com.roadguardian.backend.model.dto.request.UpdateAccidentRequest;
 import com.roadguardian.backend.model.dto.response.AccidentResponse;
 import com.roadguardian.backend.model.entity.Accident;
+import com.roadguardian.backend.model.entity.Role;
 import com.roadguardian.backend.model.entity.User;
+import com.roadguardian.backend.model.dto.response.UserResponse;
+import com.roadguardian.backend.model.entity.EmergencyResponse;
 import com.roadguardian.backend.repository.AccidentRepository;
+import com.roadguardian.backend.repository.EmergencyResponseRepository;
+import com.roadguardian.backend.repository.RoleRepository;
 import com.roadguardian.backend.repository.UserRepository;
 import com.roadguardian.backend.service.AccidentService;
 
@@ -30,11 +37,16 @@ import java.util.stream.Collectors;
 public class AccidentServiceImpl implements AccidentService {
 
 	private final AccidentRepository accidentRepository;
+	private final EmergencyResponseRepository emergencyResponseRepository;
 	private final UserRepository userRepository;
+	private final RoleRepository roleRepository;
+	private final PasswordEncoder passwordEncoder;
+	private final SimpMessagingTemplate messagingTemplate;
 
 	public AccidentResponse createAccident(CreateAccidentRequest request, Long reportedById) {
-		User reportedBy = userRepository.findById(reportedById)
-				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+		User reportedBy = reportedById != null
+				? userRepository.findById(reportedById).orElseGet(this::getOrCreateAnonymousReporter)
+				: getOrCreateAnonymousReporter();
 
 		Accident accident = Accident.builder()
 				.title(request.getTitle())
@@ -56,6 +68,7 @@ public class AccidentServiceImpl implements AccidentService {
 
 		accident = accidentRepository.save(accident);
 		log.info("Accident created with ID: {}", accident.getId());
+		messagingTemplate.convertAndSend("/topic/incidents", convertToResponse(accident));
 
 		return convertToResponse(accident);
 	}
@@ -103,6 +116,7 @@ public class AccidentServiceImpl implements AccidentService {
 
 		accident = accidentRepository.save(accident);
 		log.info("Accident updated with ID: {}", accidentId);
+		messagingTemplate.convertAndSend("/topic/incidents", convertToResponse(accident));
 
 		return convertToResponse(accident);
 	}
@@ -158,42 +172,57 @@ public class AccidentServiceImpl implements AccidentService {
 		Accident accident = accidentRepository.findById(accidentId)
 				.orElseThrow(() -> new ResourceNotFoundException("Accident not found"));
 
-		User ambulance = userRepository.findById(ambulanceUserId)
-				.orElseThrow(() -> new ResourceNotFoundException("Ambulance user not found"));
+		User ambulance = ambulanceUserId != null
+				? userRepository.findById(ambulanceUserId)
+						.orElseGet(() -> getOrCreateResponder("AMBULANCE", "ambulance", "Road", "Medic", "+911000000"))
+				: getOrCreateResponder("AMBULANCE", "ambulance", "Road", "Medic", "+911000000");
 
 		accident.setAmbulanceAssigned(ambulance);
 		accident.setStatus(Accident.IncidentStatus.DISPATCHED);
-		accidentRepository.save(accident);
+		accident = accidentRepository.save(accident);
 
-		log.info("Ambulance {} assigned to accident {}", ambulanceUserId, accidentId);
+		saveEmergencyResponse(accident, ambulance, EmergencyResponse.ResponseType.AMBULANCE, "AMB-101");
+		messagingTemplate.convertAndSend("/topic/incidents", convertToResponse(accident));
+
+		log.info("Ambulance {} assigned to accident {}", ambulance.getId(), accidentId);
 	}
 
 	public void assignPolice(Long accidentId, Long policeUserId) {
 		Accident accident = accidentRepository.findById(accidentId)
 				.orElseThrow(() -> new ResourceNotFoundException("Accident not found"));
 
-		User police = userRepository.findById(policeUserId)
-				.orElseThrow(() -> new ResourceNotFoundException("Police user not found"));
+		User police = policeUserId != null
+				? userRepository.findById(policeUserId)
+						.orElseGet(() -> getOrCreateResponder("POLICE", "police", "Road", "Guardian", "+911000001"))
+				: getOrCreateResponder("POLICE", "police", "Road", "Guardian", "+911000001");
 
 		accident.setPoliceAssigned(police);
 		accident.setStatus(Accident.IncidentStatus.DISPATCHED);
-		accidentRepository.save(accident);
+		accident = accidentRepository.save(accident);
 
-		log.info("Police {} assigned to accident {}", policeUserId, accidentId);
+		saveEmergencyResponse(accident, police, EmergencyResponse.ResponseType.POLICE, "POL-202");
+		messagingTemplate.convertAndSend("/topic/incidents", convertToResponse(accident));
+
+		log.info("Police {} assigned to accident {}", police.getId(), accidentId);
 	}
 
 	public void assignHospital(Long accidentId, Long hospitalUserId) {
 		Accident accident = accidentRepository.findById(accidentId)
 				.orElseThrow(() -> new ResourceNotFoundException("Accident not found"));
 
-		User hospital = userRepository.findById(hospitalUserId)
-				.orElseThrow(() -> new ResourceNotFoundException("Hospital user not found"));
+		User hospital = hospitalUserId != null
+				? userRepository.findById(hospitalUserId)
+						.orElseGet(() -> getOrCreateResponder("HOSPITAL", "hospital", "City", "Hospital", "+911000002"))
+				: getOrCreateResponder("HOSPITAL", "hospital", "City", "Hospital", "+911000002");
 
 		accident.setHospitalAssigned(hospital);
 		accident.setStatus(Accident.IncidentStatus.DISPATCHED);
-		accidentRepository.save(accident);
+		accident = accidentRepository.save(accident);
 
-		log.info("Hospital {} assigned to accident {}", hospitalUserId, accidentId);
+		saveEmergencyResponse(accident, hospital, EmergencyResponse.ResponseType.HOSPITAL_COORDINATION, "HOS-303");
+		messagingTemplate.convertAndSend("/topic/incidents", convertToResponse(accident));
+
+		log.info("Hospital {} assigned to accident {}", hospital.getId(), accidentId);
 	}
 
 	public void deleteAccident(Long accidentId) {
@@ -258,12 +287,94 @@ public class AccidentServiceImpl implements AccidentService {
 				.casualties(accident.getCasualties())
 				.imageUrl(accident.getImageUrl())
 				.videoUrl(accident.getVideoUrl())
+				.reportedBy(accident.getReportedBy() != null ? convertToUserResponse(accident.getReportedBy()) : null)
 				.responseTimeMs(accident.getResponseTimeMs())
 				.weatherCondition(accident.getWeatherCondition())
 				.trafficDensity(accident.getTrafficDensity())
 				.roadType(accident.getRoadType())
+				.ambulanceAssigned(accident.getAmbulanceAssigned() != null ? convertToUserResponse(accident.getAmbulanceAssigned()) : null)
+				.policeAssigned(accident.getPoliceAssigned() != null ? convertToUserResponse(accident.getPoliceAssigned()) : null)
+				.hospitalAssigned(accident.getHospitalAssigned() != null ? convertToUserResponse(accident.getHospitalAssigned()) : null)
 				.createdAt(accident.getCreatedAt())
 				.updatedAt(accident.getUpdatedAt())
 				.build();
+	}
+
+	private UserResponse convertToUserResponse(User user) {
+		return UserResponse.builder()
+				.id(user.getId())
+				.firstName(user.getFirstName())
+				.lastName(user.getLastName())
+				.email(user.getEmail())
+				.phone(user.getPhone())
+				.role(user.getRole().getName())
+				.active(user.getActive())
+				.emailVerified(user.getEmailVerified())
+				.profileImageUrl(user.getProfileImageUrl())
+				.createdAt(user.getCreatedAt())
+				.updatedAt(user.getUpdatedAt())
+				.build();
+	}
+
+	private Role getOrCreateRole(String roleName) {
+		return roleRepository.findByName(roleName)
+				.orElseGet(() -> roleRepository.save(Role.builder()
+						.name(roleName)
+						.description(roleName + " responder role")
+						.createdAt(LocalDateTime.now())
+						.updatedAt(LocalDateTime.now())
+						.build()));
+	}
+
+	private User getOrCreateResponder(String roleName, String emailPrefix, String firstName, String lastName, String phone) {
+		Role role = getOrCreateRole(roleName);
+		return userRepository.findByEmail(emailPrefix + "@roadguardian.ai")
+				.orElseGet(() -> userRepository.save(User.builder()
+						.firstName(firstName)
+						.lastName(lastName)
+						.email(emailPrefix + "@roadguardian.ai")
+						.password(passwordEncoder.encode("RoadGuardian123!"))
+						.phone(phone)
+						.role(role)
+						.active(true)
+						.emailVerified(true)
+						.profileImageUrl(null)
+						.latitude(0.0)
+						.longitude(0.0)
+						.build()));
+	}
+
+	private void saveEmergencyResponse(Accident accident, User responder, EmergencyResponse.ResponseType type, String vehicleRegistration) {
+		EmergencyResponse emergencyResponse = EmergencyResponse.builder()
+				.accident(accident)
+				.responder(responder)
+				.responseType(type)
+				.status(EmergencyResponse.ResponseStatus.DISPATCHED)
+				.etaMinutes(5)
+				.currentLatitude(accident.getLatitude())
+				.currentLongitude(accident.getLongitude())
+				.vehicleRegistration(vehicleRegistration)
+				.notes("Auto-dispatched by RoadGuardian")
+				.build();
+		emergencyResponseRepository.save(emergencyResponse);
+	}
+
+	private User getOrCreateAnonymousReporter() {
+		return userRepository.findByEmail("anonymous@roadguardian.ai")
+				.orElseGet(() -> {
+					Role userRole = getOrCreateRole("USER");
+
+					User anonymous = User.builder()
+						.firstName("Anonymous")
+						.lastName("Reporter")
+						.email("anonymous@roadguardian.ai")
+						.password(passwordEncoder.encode("RoadGuardian123!"))
+						.role(userRole)
+						.active(true)
+						.emailVerified(true)
+						.build();
+
+					return userRepository.save(anonymous);
+				});
 	}
 }

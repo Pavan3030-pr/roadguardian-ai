@@ -42,6 +42,16 @@ public class AccidentController {
 				.body(new ApiResponse<>(true, "Accident reported successfully", response));
 	}
 
+	@PostMapping("/public")
+	@Operation(summary = "Report new accident (public)", description = "Create a new accident report without authentication")
+	public ResponseEntity<ApiResponse<AccidentResponse>> createPublicAccident(
+			@Valid @RequestBody CreateAccidentRequest request
+	) {
+		AccidentResponse response = accidentService.createAccident(request, null);
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(new ApiResponse<>(true, "Public accident reported successfully", response));
+	}
+
 	@GetMapping("/{id}")
 	@Operation(summary = "Get accident details", description = "Fetch accident information by ID")
 	public ResponseEntity<ApiResponse<AccidentResponse>> getAccident(@PathVariable Long id) {
@@ -86,9 +96,16 @@ public class AccidentController {
 		return ResponseEntity.ok(new ApiResponse<>(true, "Nearby accidents fetched", response));
 	}
 
-	@GetMapping("/active/all")
+	@GetMapping("/active")
 	@Operation(summary = "Get active accidents", description = "Fetch all active (unresolved) accidents")
 	public ResponseEntity<ApiResponse<List<AccidentResponse>>> getActiveAccidents() {
+		List<AccidentResponse> response = accidentService.getActiveAccidents();
+		return ResponseEntity.ok(new ApiResponse<>(true, "Active accidents fetched", response));
+	}
+
+	@GetMapping("/active/all")
+	@Operation(summary = "Get active accidents (legacy)", description = "Fetch all active (unresolved) accidents")
+	public ResponseEntity<ApiResponse<List<AccidentResponse>>> getActiveAccidentsLegacy() {
 		List<AccidentResponse> response = accidentService.getActiveAccidents();
 		return ResponseEntity.ok(new ApiResponse<>(true, "Active accidents fetched", response));
 	}
@@ -102,39 +119,66 @@ public class AccidentController {
 	) {
 		AccidentResponse response = accidentService.updateAccident(id, request);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Accident updated successfully", response));
-	}
+}
 
 	@PostMapping("/{id}/assign-ambulance")
-	@PreAuthorize("hasAnyRole('ADMIN', 'POLICE')")
 	@Operation(summary = "Assign ambulance", description = "Assign ambulance to accident")
 	public ResponseEntity<ApiResponse<String>> assignAmbulance(
 			@PathVariable Long id,
-			@RequestParam Long ambulanceUserId
+			@RequestParam(required = false) Long ambulanceUserId
 	) {
 		accidentService.assignAmbulance(id, ambulanceUserId);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Ambulance assigned successfully", ""));
 	}
 
 	@PostMapping("/{id}/assign-police")
-	@PreAuthorize("hasAnyRole('ADMIN')")
 	@Operation(summary = "Assign police", description = "Assign police unit to accident")
 	public ResponseEntity<ApiResponse<String>> assignPolice(
 			@PathVariable Long id,
-			@RequestParam Long policeUserId
+			@RequestParam(required = false) Long policeUserId
 	) {
 		accidentService.assignPolice(id, policeUserId);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Police assigned successfully", ""));
 	}
 
 	@PostMapping("/{id}/assign-hospital")
-	@PreAuthorize("hasAnyRole('ADMIN')")
 	@Operation(summary = "Assign hospital", description = "Alert hospital for accident")
 	public ResponseEntity<ApiResponse<String>> assignHospital(
 			@PathVariable Long id,
-			@RequestParam Long hospitalUserId
+			@RequestParam(required = false) Long hospitalUserId
 	) {
 		accidentService.assignHospital(id, hospitalUserId);
 		return ResponseEntity.ok(new ApiResponse<>(true, "Hospital alerted successfully", ""));
+	}
+
+	@PostMapping("/{id}/ambulance")
+	@Operation(summary = "Dispatch ambulance", description = "Dispatch ambulance for accident")
+	public ResponseEntity<ApiResponse<String>> dispatchAmbulance(
+			@PathVariable Long id,
+			@RequestParam(required = false) Long ambulanceUserId
+	) {
+		accidentService.assignAmbulance(id, ambulanceUserId);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Ambulance dispatched successfully", ""));
+	}
+
+	@PostMapping("/{id}/police")
+	@Operation(summary = "Notify police", description = "Notify local police for accident")
+	public ResponseEntity<ApiResponse<String>> notifyPolice(
+			@PathVariable Long id,
+			@RequestParam(required = false) Long policeUserId
+	) {
+		accidentService.assignPolice(id, policeUserId);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Police notified successfully", ""));
+	}
+
+	@PostMapping("/{id}/hospital")
+	@Operation(summary = "Notify hospital", description = "Notify hospital for accident")
+	public ResponseEntity<ApiResponse<String>> notifyHospital(
+			@PathVariable Long id,
+			@RequestParam(required = false) Long hospitalUserId
+	) {
+		accidentService.assignHospital(id, hospitalUserId);
+		return ResponseEntity.ok(new ApiResponse<>(true, "Hospital notified successfully", ""));
 	}
 
 	@DeleteMapping("/{id}")

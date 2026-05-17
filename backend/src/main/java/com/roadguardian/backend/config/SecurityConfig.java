@@ -25,6 +25,8 @@ import com.roadguardian.backend.security.JwtAuthenticationFilter;
 
 import javax.crypto.SecretKey;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -36,6 +38,21 @@ public class SecurityConfig {
 
 	@Value("${app.jwt.expiration:86400000}")
 	private long jwtExpirationMs;
+
+	@Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,https://roadguardian.com,https://*.vercel.app,https://*.render.com}")
+	private String corsAllowedOrigins;
+
+	@Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS,PATCH}")
+	private String corsAllowedMethods;
+
+	@Value("${app.cors.allowed-headers:*}")
+	private String corsAllowedHeaders;
+
+	@Value("${app.cors.allow-credentials:true}")
+	private boolean corsAllowCredentials;
+
+	@Value("${app.cors.max-age:3600}")
+	private long corsMaxAge;
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -80,8 +97,16 @@ public class SecurityConfig {
 						.requestMatchers("/api/v1/health/**").permitAll()
 						.requestMatchers("/actuator/**").permitAll()
 						.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-						.requestMatchers(HttpMethod.GET, "/api/v1/accidents/public/**").permitAll()
-						.requestMatchers("/ws/**").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/accidents/public").permitAll()
+					.requestMatchers(HttpMethod.GET, "/api/v1/accidents/**").permitAll()
+					.requestMatchers(HttpMethod.POST, "/api/v1/accidents/*/assign-ambulance").permitAll()
+					.requestMatchers(HttpMethod.POST, "/api/v1/accidents/*/assign-police").permitAll()
+					.requestMatchers(HttpMethod.POST, "/api/v1/accidents/*/assign-hospital").permitAll()
+					.requestMatchers(HttpMethod.POST, "/api/v1/accidents/*/ambulance").permitAll()
+					.requestMatchers(HttpMethod.POST, "/api/v1/accidents/*/police").permitAll()
+					.requestMatchers(HttpMethod.POST, "/api/v1/accidents/*/hospital").permitAll()
+					.requestMatchers(HttpMethod.GET, "/api/v1/analytics/**").permitAll()
+					.requestMatchers("/ws/**").permitAll()
 						.anyRequest().authenticated()
 				)
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -93,16 +118,26 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(Arrays.asList(
-				"http://localhost:3000",
-				"http://localhost:5173",
-				"http://localhost:8080",
-				"https://roadguardian.com"
-		));
-		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-		configuration.setAllowedHeaders(Arrays.asList("*"));
-		configuration.setAllowCredentials(true);
-		configuration.setMaxAge(3600L);
+		List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
+				.map(String::trim)
+				.filter(origin -> !origin.isEmpty())
+				.collect(Collectors.toList());
+
+		List<String> allowedMethods = Arrays.stream(corsAllowedMethods.split(","))
+				.map(String::trim)
+				.filter(method -> !method.isEmpty())
+				.collect(Collectors.toList());
+
+		List<String> allowedHeaders = Arrays.stream(corsAllowedHeaders.split(","))
+				.map(String::trim)
+				.filter(header -> !header.isEmpty())
+				.collect(Collectors.toList());
+
+		configuration.setAllowedOriginPatterns(allowedOrigins);
+		configuration.setAllowedMethods(allowedMethods);
+		configuration.setAllowedHeaders(allowedHeaders);
+		configuration.setAllowCredentials(corsAllowCredentials);
+		configuration.setMaxAge(corsMaxAge);
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
