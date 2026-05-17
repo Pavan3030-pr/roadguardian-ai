@@ -27,6 +27,8 @@ const AccidentDetails = () => {
   const mapInstance = useRef(null)
   const markerLayer = useRef(null)
   const socketRef = useRef(null)
+  const reconnectTimerRef = useRef(null)
+  const unmountedRef = useRef(false)
   const selectedAccidentRef = useRef(null)
 
   const pushToast = (message, type = "success") => {
@@ -127,15 +129,40 @@ const AccidentDetails = () => {
   useEffect(() => {
     if (socketRef.current) return
 
-    const backendHost = import.meta.env.VITE_API_HOST || (window.location.hostname === "localhost" ? "localhost:8080" : window.location.host)
+    const apiBase = import.meta.env.VITE_API_BASE_URL
+    const defaultHost = window.location.hostname === "localhost" ? "localhost:8080" : window.location.host
+
+    const resolveBackendHost = () => {
+      if (!apiBase) return defaultHost
+      const trimmed = apiBase.trim().replace(/\/+$/, "")
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        try {
+          return new URL(trimmed).host
+        } catch (error) {
+          console.warn("[WS] Invalid VITE_API_BASE_URL, falling back to host", error)
+          return defaultHost
+        }
+      }
+      if (trimmed.startsWith("/")) {
+        return defaultHost
+      }
+      return trimmed
+    }
+
+    const backendHost = resolveBackendHost()
     const protocol = window.location.protocol === "https:" ? "wss" : "ws"
-    const url = `${protocol}://${backendHost}/ws/incidents/websocket`
+    const url = `${protocol}://${backendHost}/ws/incidents`
 
     const socket = new WebSocket(url)
     socketRef.current = socket
 
     socket.addEventListener("open", () => {
+      console.info("[WS] connected", url)
       setSocketStatus("LIVE")
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
       socket.send("CONNECT\naccept-version:1.2\nheart-beat:10000,10000\n\n\u0000")
       socket.send("SUBSCRIBE\nid:sub-0\ndestination:/topic/incidents\n\n\u0000")
     })
@@ -146,6 +173,7 @@ const AccidentDetails = () => {
       const body = raw.slice(raw.indexOf("\n\n") + 2).replace(/\u0000/g, "").trim()
       if (!body) return
 
+      console.debug("[WS] message received", body)
       try {
         const payload = JSON.parse(body)
         if (!payload?.id) return
@@ -164,13 +192,30 @@ const AccidentDetails = () => {
       }
     })
 
-    socket.addEventListener("close", () => setSocketStatus("DISCONNECTED"))
-    socket.addEventListener("error", () => setSocketStatus("ERROR"))
+    socket.addEventListener("close", (event) => {
+      console.warn("[WS] closed", event)
+      setSocketStatus("DISCONNECTED")
+      socketRef.current = null
+      if (!unmountedRef.current) {
+        setSocketStatus("RECONNECTING")
+        reconnectTimerRef.current = window.setTimeout(() => {
+          reconnectTimerRef.current = null
+          console.info("[WS] reconnecting")
+          connectWebSocket()
+        }, 3000)
+      }
+    })
+
+    socket.addEventListener("error", (event) => {
+      console.error("[WS] error", event)
+      setSocketStatus("ERROR")
+    })
 
     return () => {
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close()
       }
+      socketRef.current = null
     }
   }, [])
 

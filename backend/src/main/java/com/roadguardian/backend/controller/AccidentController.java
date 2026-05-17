@@ -52,6 +52,14 @@ public class AccidentController {
 				.body(new ApiResponse<>(true, "Public accident reported successfully", response));
 	}
 
+	@PostMapping("/demo")
+	@Operation(summary = "Create demo accident", description = "Generate a demo accident for dashboard testing")
+	public ResponseEntity<ApiResponse<AccidentResponse>> createDemoAccident() {
+		AccidentResponse response = accidentService.createDemoAccident();
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(new ApiResponse<>(true, "Demo accident created successfully", response));
+	}
+
 	@GetMapping("/{id}")
 	@Operation(summary = "Get accident details", description = "Fetch accident information by ID")
 	public ResponseEntity<ApiResponse<AccidentResponse>> getAccident(@PathVariable Long id) {

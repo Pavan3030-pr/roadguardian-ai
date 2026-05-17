@@ -12,6 +12,8 @@ public interface AccidentService {
 
 	AccidentResponse createAccident(CreateAccidentRequest request, Long reportedById);
 
+    AccidentResponse createDemoAccident();
+
 	AccidentResponse updateAccident(Long accidentId, UpdateAccidentRequest request);
 
 	AccidentResponse getAccidentById(Long accidentId);

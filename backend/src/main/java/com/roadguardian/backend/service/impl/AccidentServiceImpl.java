@@ -73,6 +73,27 @@ public class AccidentServiceImpl implements AccidentService {
 		return convertToResponse(accident);
 	}
 
+	public AccidentResponse createDemoAccident() {
+		CreateAccidentRequest demoRequest = CreateAccidentRequest.builder()
+				.title("Demo Accident Alert")
+				.description("A live demo accident created for emergency dispatch testing.")
+				.latitude(13.0827)
+				.longitude(80.2707)
+				.locationName("Chennai Demo Route")
+				.severity("HIGH")
+				.casualties(2)
+				.weatherCondition("RAINY")
+				.trafficDensity("HIGH")
+				.roadType("HIGHWAY")
+				.imageUrl("")
+				.videoUrl("")
+				.build();
+
+		AccidentResponse response = createAccident(demoRequest, null);
+		log.info("Demo accident created with ID: {}", response.getId());
+		return response;
+	}
+
 	public AccidentResponse updateAccident(Long accidentId, UpdateAccidentRequest request) {
 		Accident accident = accidentRepository.findById(accidentId)
 				.orElseThrow(() -> new ResourceNotFoundException("Accident not found with ID: " + accidentId));
@@ -163,9 +184,11 @@ public class AccidentServiceImpl implements AccidentService {
 	}
 
 	public List<AccidentResponse> getActiveAccidents() {
-		return accidentRepository.findActiveAccidents().stream()
+		List<AccidentResponse> activeAccidents = accidentRepository.findActiveAccidents().stream()
 				.map(this::convertToResponse)
 				.collect(Collectors.toList());
+		log.info("Found {} active accidents", activeAccidents.size());
+		return activeAccidents;
 	}
 
 	public void assignAmbulance(Long accidentId, Long ambulanceUserId) {
